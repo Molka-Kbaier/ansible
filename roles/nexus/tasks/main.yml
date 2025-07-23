@@ -1,0 +1,57 @@
+---
+# tasks file for nexus
+- name: Créer le répertoire de projet Nexus
+  file:
+    path: "{{ nexus_dir }}"
+    state: directory
+    owner: "{{ system_user }}"
+    group: "{{ system_user }}"
+  become: true
+
+- name: Créer le répertoire de données Nexus
+  file:
+    path: "{{ nexus_data_dir }}"
+    state: directory
+    owner: "{{ system_user }}"
+    group: "{{ system_user }}"
+  become: true
+
+- name: Supprimer le conteneur Nexus existant s'il est présent
+  community.docker.docker_container:
+    name: nexus
+    state: absent
+    force_kill: yes
+  become: true
+  ignore_errors: yes
+  
+- name: Déployer Nexus avec Docker Compose
+  copy:
+    dest: "{{ nexus_dir }}/docker-compose.yml"
+    content: |
+      version: '3.8'
+      services:
+        nexus:
+          image: sonatype/nexus3
+          container_name: nexus
+          ports:
+            - "{{ nexus_port }}:8081"
+          volumes:
+            - {{ nexus_data_dir }}:/nexus-data
+  become: true
+
+- name: Vérifier l'état du conteneur Nexus
+  community.docker.docker_container_info:
+    name: nexus
+  register: nexus_container
+  become: true
+  changed_when: false
+
+- name: Démarrer Nexus si nécessaire
+  community.docker.docker_compose_v2:
+    project_src: "{{ nexus_dir }}"
+    state: present
+    recreate: always
+    pull: 'always'
+  become: true
+  when: true
+  notify: Restart Nexus

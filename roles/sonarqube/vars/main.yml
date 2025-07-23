@@ -1,0 +1,7 @@
+---
+# vars file for sonarqube
+sonarqube_port: 9000
+sonarqube_user: sonar
+sonarqube_password: sonar
+sonarqube_db: sonar
+

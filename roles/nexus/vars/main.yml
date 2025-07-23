@@ -1,0 +1,6 @@
+---
+# vars file for nexus
+nexus_port: 8081
+nexus_data_dir: "/opt/nexus-data"
+nexus_dir: "/opt/nexus"
+

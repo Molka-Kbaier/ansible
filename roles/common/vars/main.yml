@@ -1,0 +1,13 @@
+---
+# vars file for common
+common_packages:
+  - curl
+  - wget
+  - gnupg
+  - ca-certificates
+  - apt-transport-https
+  - software-properties-common
+  - lsb-release
+  - git
+  - unzip
+  - python3-pip

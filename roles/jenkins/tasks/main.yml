@@ -1,0 +1,60 @@
+---
+- name: Vérifier si Jenkins est déjà installé
+  command: dpkg -l jenkins
+  register: jenkins_installed
+  ignore_errors: true
+  changed_when: false
+
+- name: Installer les dépendances (sauf si Jenkins est installé)
+  apt:
+    name:
+      - openjdk-17-jdk
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - software-properties-common
+      - apt-transport-https
+      - wget
+    state: present
+  when: jenkins_installed.rc != 0
+  become: true
+
+- name: Ajouter la clé Jenkins (sauf si Jenkins est installé)
+  apt_key:
+    url: "https://pkg.jenkins.io/debian-stable/jenkins.io.key"
+    state: present
+  when: jenkins_installed.rc != 0
+  become: true
+  
+- name: Configurer le dépôt Jenkins (sauf si existant)
+  block:
+    - name: Vérifier existence dépôt
+      stat:
+        path: /etc/apt/sources.list.d/jenkins.list
+      register: repo_file
+
+    - name: Ajouter dépôt Jenkins
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+        state: present
+        filename: "jenkins.list"
+        update_cache: yes
+      when: not repo_file.stat.exists
+  when: jenkins_installed.rc != 0
+  become: true
+
+- name: Installer Jenkins (sauf si déjà installé)
+  apt:
+    name: jenkins
+    state: present
+  when: jenkins_installed.rc != 0
+  become: true
+
+- name: Démarrer Jenkins
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+  become: true
+  notify: Restart Jenkins

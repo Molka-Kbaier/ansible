@@ -1,0 +1,37 @@
+---
+- name: Vérifier les processus bloquant APT
+  shell: |
+    # Vérifier les processus utilisant les verrous APT
+    (lsof -t /var/lib/apt/lists/lock 2>/dev/null || true)
+    (lsof -t /var/lib/dpkg/lock 2>/dev/null || true)
+  args:
+    executable: /bin/bash
+  register: lock_processes
+  changed_when: false
+  ignore_errors: true
+
+- name: Tuer les processus bloquants
+  command: "kill -9 {{ item }}"
+  loop: "{{ lock_processes.stdout_lines | select('match', '^[0-9]+$') | list }}"
+  when: 
+    - lock_processes.stdout_lines | length > 0
+    - item | match('^[0-9]+$')
+  ignore_errors: true
+
+- name: Supprimer les verrous APT
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /var/lib/apt/lists/lock
+    - /var/lib/dpkg/lock
+  ignore_errors: true
+
+- name: Supprimer les fichiers de dépôt problématiques
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/docker.list
+    - /etc/apt/sources.list.d/jenkins.list
+  ignore_errors: true

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Jenkins Dashboard</title>
+</head>
+<body>
+  <h1>Welcome to Jenkins on {{ ansible_hostname }}</h1>
+  <p>Access Jenkins at: <a href="http://{{ ansible_host }}:{{ jenkins_port }}">http://{{ ansible_host }}:{{ jenkins_port }}</a></p>
+</body>
+</html>
+

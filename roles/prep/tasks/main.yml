@@ -1,0 +1,22 @@
+---
+# tasks file for roles/prep
+
+- name: Arrêter les services potentiellement conflictuels
+  service:
+    name: "{{ item }}"
+    state: stopped
+  loop:
+    - docker
+    - jenkins
+    - containerd
+  ignore_errors: true
+  become: true
+
+- name: Vider le cache APT
+  command: apt clean
+  become: true
+
+- name: Réparer les paquets cassés
+  command: apt install -f -y
+  become: true
+  ignore_errors: true

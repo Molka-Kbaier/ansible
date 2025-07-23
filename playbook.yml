@@ -1,0 +1,25 @@
+---
+- name: Installer la pile DevOps complète
+  hosts: local
+  become: true
+  pre_tasks:
+    - name: Inclure le rôle de préparation
+      include_role:
+        name: prep
+
+    - name: Inclure le rôle de gestion des verrous APT
+      include_role:
+        name: apt_lock
+  vars:
+    nexus_data_dir: "/opt/nexus-data"
+    prometheus_config_dir: "/opt/prometheus"
+  roles:
+    - common
+    - jenkins
+    - docker
+    - sonarqube
+    - nexus
+    - monitoring
+    - trivy
+ 
+    

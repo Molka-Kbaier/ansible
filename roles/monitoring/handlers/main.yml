@@ -1,0 +1,10 @@
+---
+# handlers file for monitoring
+- name: Restart Monitoring
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_dir }}"
+    state: restarted
+    recreate: always
+    pull: 'no'
+  become: true
+

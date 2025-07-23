@@ -1,0 +1,17 @@
+---
+# group_vars/all.yml
+system_user: "{{ lookup('env', 'USER') }}"
+docker_users:
+  - "{{ system_user }}"
+#vars sonarqube
+sonarqube_dir: "/opt/sonarqube"
+sonarqube_port: 9000
+sonarqube_db_user: sonar
+sonarqube_db_password: sonar
+sonarqube_db_name: sonar
+#vars nexus
+nexus_dir: "/opt/nexus"          # Pour les fichiers de configuration
+nexus_data_dir: "/opt/nexus-data" # Pour les données persistantes
+nexus_port: 8081
+#monitoring
+monitoring_dir: "/opt/monitoring"

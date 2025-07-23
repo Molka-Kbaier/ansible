@@ -1,0 +1,24 @@
+---
+# tasks file for argocd
+- name: Installer ArgoCD sur K8s
+  community.kubernetes.k8s:
+    definition:
+      apiVersion: argoproj.io/v1alpha1
+      kind: Application
+      metadata:
+        name: argocd-install
+        namespace: argocd
+      spec:
+        project: default
+        source:
+          repoURL: https://github.com/argoproj/argo-cd.git
+          targetRevision: stable
+          path: manifests/install.yaml
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: argocd
+        syncPolicy:
+          automated: {}
+  become: true
+  when: "'kubectl' in ansible_facts.packages"
+

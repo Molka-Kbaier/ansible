@@ -1,0 +1,23 @@
+---
+# tasks file for common 
+- name: Libérer les verrous APT si nécessaire
+  shell: |
+    fuser -k /var/lib/apt/lists/lock || true
+    fuser -k /var/lib/dpkg/lock || true
+    rm -f /var/lib/apt/lists/lock
+    rm -f /var/lib/dpkg/lock
+  become: true
+  ignore_errors: true  # Ignorer les erreurs si les verrous n'existent pas
+  changed_when: false  # Toujours considérer comme inchangé
+   
+- name: Mettre à jour le système
+  apt:
+    update_cache: yes
+    upgrade: dist
+    cache_valid_time: 3600
+
+- name: Installer les dépendances communes
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ common_packages }}"

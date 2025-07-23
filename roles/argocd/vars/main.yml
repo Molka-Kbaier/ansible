@@ -1,0 +1,4 @@
+---
+# vars file for argocd
+argocd_port: 8081
+

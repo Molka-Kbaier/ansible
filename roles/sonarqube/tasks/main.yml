@@ -1,0 +1,94 @@
+---
+# tasks file for sonarqube
+- name: Créer dossier SonarQube
+  file:
+    path: "{{ sonarqube_dir }}"
+    state: directory
+    owner: "1000"  # UID de l'utilisateur SonarQube
+    group: "1000"
+  become: true
+  
+- name: Créer les sous-répertoires de données
+  file:
+    path: "{{ sonarqube_dir }}/{{ item }}"
+    state: directory
+    owner: "1000"
+    group: "1000"
+  loop:
+    - "postgres_data"
+    - "sonarqube_data"
+  become: true
+
+- name: Déployer SonarQube avec Docker Compose
+  copy:
+    dest: "{{ sonarqube_dir }}/docker-compose.yml"
+    content: |
+      version: '3.8'
+      services:
+        db:
+          image: postgres:13
+          container_name: sonarqube-db
+          environment:
+            POSTGRES_USER: "{{ sonarqube_db_user }}"
+            POSTGRES_PASSWORD: "{{ sonarqube_db_password }}"
+            POSTGRES_DB: "{{ sonarqube_db_name }}"
+          volumes:
+            - {{ sonarqube_dir }}/postgres_data:/var/lib/postgresql/data
+          healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U {{ sonarqube_db_user }}"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        sonarqube:
+          image: sonarqube:community
+          container_name: sonarqube
+          depends_on:
+            - db
+          environment:
+            SONAR_JDBC_URL: "jdbc:postgresql://db:5432/{{ sonarqube_db_name }}"
+            SONAR_JDBC_USERNAME: "{{ sonarqube_db_user }}"
+            SONAR_JDBC_PASSWORD: "{{ sonarqube_db_password }}"
+          ports:
+            - "{{ sonarqube_port }}:9000"
+          volumes:
+            - {{ sonarqube_dir }}/sonarqube_data:/opt/sonarqube/data
+            - {{ sonarqube_dir }}/extensions:/opt/sonarqube/extensions
+          healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+  become: true
+
+- name: Vérifier l'état du conteneur SonarQube
+  community.docker.docker_container_info:
+    name: sonarqube
+  register: sonarqube_container
+  become: true
+  changed_when: false
+
+- name: Démarrer SonarQube si nécessaire
+  community.docker.docker_compose_v2:
+    project_src: "{{ sonarqube_dir }}"
+    state: present
+    recreate: always
+    pull: 'always'
+  become: true
+  when: true
+  notify: Restart SonarQube
+
+- name: Vérifier les logs de SonarQube
+  command: docker logs sonarqube
+  register: sonarqube_logs
+  changed_when: false
+  ignore_errors: true
+  become: true
+  when: sonarqube_container.exists or not sonarqube_container.exists  # Toujours exécuter
+
+- name: Afficher les logs de SonarQube
+  debug:
+    var: sonarqube_logs.stdout_lines
+  when: 
+    - sonarqube_logs.stdout is defined
+    - sonarqube_logs.stdout | length > 0

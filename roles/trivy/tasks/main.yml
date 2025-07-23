@@ -1,0 +1,29 @@
+---
+# tasks file for trivy
+- name: Mettre à jour le système
+  apt:
+    update_cache: yes
+    upgrade: dist
+  become: true
+
+- name: Ajouter dépôt Trivy
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb {{ ansible_distribution_release }} main"
+    state: present
+    filename: trivy.list
+  become: true
+
+- name: Ajouter clé Trivy
+  apt_key:
+    url: "https://aquasecurity.github.io/trivy-repo/deb/public.key"
+    state: present
+    keyring: /usr/share/keyrings/trivy.gpg
+  become: true
+
+- name: Installer Trivy
+  apt:
+    name: trivy
+    state: present
+    update_cache: yes
+  become: true
+
