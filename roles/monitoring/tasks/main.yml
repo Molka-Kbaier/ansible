@@ -1,6 +1,48 @@
 ---
-# tasks file for monitoring
-- name: Créer dossier monitoring
+- name: Définir les variables pour Prometheus
+  set_fact:
+    prometheus_container_name: "prometheus"
+    prometheus_image_name: "prom/prometheus"
+    monitoring_dir: "/opt/monitoring"
+
+- name: Vérifier si le conteneur Prometheus existe
+  community.docker.docker_container_info:
+    name: "{{ prometheus_container_name }}"
+  register: prometheus_info
+  ignore_errors: yes
+  become: true
+
+- name: Supprimer Prometheus
+  community.docker.docker_container:
+    name: "{{ prometheus_container_name }}"
+    state: absent
+    force_kill: yes
+  when: prometheus_info.exists
+  become: true
+  ignore_errors: yes
+
+- name: Définir les variables pour Grafana
+  set_fact:
+    grafana_container_name: "grafana"
+    grafana_image_name: "grafana/grafana"
+
+- name: Vérifier si le conteneur Grafana existe
+  community.docker.docker_container_info:
+    name: "{{ grafana_container_name }}"
+  register: grafana_info
+  ignore_errors: yes
+  become: true
+
+- name: Supprimer Grafana
+  community.docker.docker_container:
+    name: "{{ grafana_container_name }}"
+    state: absent
+    force_kill: yes
+  when: grafana_info.exists
+  become: true
+  ignore_errors: yes
+
+- name: Créer le répertoire de monitoring
   file:
     path: "{{ monitoring_dir }}"
     state: directory
@@ -12,55 +54,38 @@
     content: |
       global:
         scrape_interval: 15s
+      
       scrape_configs:
         - job_name: 'prometheus'
           static_configs:
             - targets: ['localhost:9090']
-        - job_name: 'node'
-          static_configs:
-            - targets: ['localhost:9100']
         - job_name: 'jenkins'
-          metrics_path: '/prometheus'
+          metrics_path: /prometheus
           static_configs:
-            - targets: ['jenkins:8080']
-        - job_name: 'sonarqube'
+            - targets: ['172.17.0.1:8080']
+        - job_name: 'node-exporter'
           static_configs:
-            - targets: ['sonarqube:9000']
+            - targets: ['node-exporter:9100']
   become: true
 
-- name: Déployer stack monitoring
-  copy:
-    dest: "{{ monitoring_dir }}/docker-compose.yml"
-    content: |
-      version: '3'
-      services:
-        prometheus:
-          image: prom/prometheus
-          container_name: prometheus
-          ports:
-            - "9090:9090"
-          volumes:
-            - {{ monitoring_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml
-        grafana:
-          image: grafana/grafana
-          container_name: grafana
-          ports:
-            - "3000:3000"
-          depends_on:
-            - prometheus
-        node-exporter:
-          image: prom/node-exporter
-          container_name: node-exporter
-          ports:
-            - "9100:9100"
+- name: Démarrer Prometheus
+  community.docker.docker_container:
+    name: "{{ prometheus_container_name }}"
+    image: "{{ prometheus_image_name }}"
+    state: started
+    restart_policy: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - "{{ monitoring_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml"
   become: true
 
-- name: Démarrer monitoring
-  community.docker.docker_compose_v2:
-    project_src: "{{ monitoring_dir }}"
-    state: present
-    recreate: always
-    pull: 'always'
-    timeout: 300
+- name: Démarrer Grafana
+  community.docker.docker_container:
+    name: "{{ grafana_container_name }}"
+    image: "{{ grafana_image_name }}"
+    state: started
+    restart_policy: always
+    ports:
+      - "3000:3000"
   become: true
- 
